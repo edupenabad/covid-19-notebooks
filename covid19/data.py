@@ -35,7 +35,7 @@ def download(url, path=".", repo="italy"):
     return str(download_path)
 
 
-def reformat(path):
+def reformat(path,varname='deaths'):
     raw_data = pd.read_csv(path)
     lines = []
     dates = [np.datetime64('20{2}-{0:02d}-{1:02d}'.format(*map(int, d.split('/')))) for d in raw_data.columns[4:]]
@@ -48,7 +48,7 @@ def reformat(path):
                 lines.append({
                     'location': location,
                     'country': record['Country/Region'],
-                    'deaths': d,
+                    varname: d,
                     'date': dates[i]
                 })
 
