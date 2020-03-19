@@ -23,6 +23,7 @@ class ExponentialFit:
     r2 = attr.attrib()
     start = attr.attrib()
     stop = attr.attrib()
+    T_d_err = attr.attrib()
 
     @classmethod
     def from_frame(cls, y, data, start=None, stop=None, p0=P0):
@@ -38,18 +39,24 @@ class ExponentialFit:
         log2_y_fit = log2_y[np.isfinite(log2_y)]
 
         # (t_0_norm, T_d_norm), covariance = scipy.optimize.curve_fit(linear, x_fit, log2_y_fit)
-        m, y, r2, _, _ = scipy.stats.linregress(x_fit, log2_y_fit)
+        m, y, r2, pval, stderr = scipy.stats.linregress(x_fit, log2_y_fit)
         t_0_norm = -y / m
         T_d_norm = 1 / m
 
         T_d = T_d_norm * T_d_guess
         t_0 = t_0_guess + t_0_norm * T_d_guess
 
-        return cls(t_0, T_d, r2=r2, start=t_fit[0], stop=t_fit[-1])
+        T_d_err = (stderr/(T_d_norm*T_d_norm)) * T_d_guess   # err(1/x) = err(x)/x**2.
+
+        return cls(t_0, T_d, r2=r2, start=t_fit[0], stop=t_fit[-1], T_d_err=T_d_err)
 
     @property
     def T_d_days(self):
         return self.T_d / np.timedelta64(1, "D")
+
+    @property
+    def T_d_err_days(self):
+        return self.T_d_err / np.timedelta64(1, "D")
 
     def predict(self, t):
         if isinstance(t, str):
@@ -57,7 +64,7 @@ class ExponentialFit:
         return 2 ** linear(t, self.t_0, self.T_d)
 
     def __str__(self):
-        return f"T_d={self.T_d_days:.2f}, t_0='{str(self.t_0)[:10]}', r^2={self.r2:.3f} start='{str(self.start)[:10]}', stop='{str(self.stop)[:10]}'"
+        return f"T_d={self.T_d_days:.2f}, T_d_err={self.T_d_err_days:.2f}, t_0='{str(self.t_0)[:10]}', r^2={self.r2:.3f} start='{str(self.start)[:10]}', stop='{str(self.stop)[:10]}'"
 
     def shift(self, offset):
         if isinstance(offset, (float, int)):
